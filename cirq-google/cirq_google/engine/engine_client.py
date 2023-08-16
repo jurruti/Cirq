@@ -38,6 +38,7 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from cirq._compat import cached_property
 from cirq_google.cloud import quantum
 from cirq_google.engine.asyncio_executor import AsyncioExecutor
+from cirq_google.engine.processor_selector import ProcessorSelector
 
 _M = TypeVar('_M', bound=proto.Message)
 _R = TypeVar('_R')
@@ -377,8 +378,9 @@ class EngineClient:
         project_id: str,
         program_id: str,
         job_id: Optional[str],
-        processor_ids: Sequence[str],
         run_context: any_pb2.Any,
+        processor_ids: Optional[Sequence[str]] = None,
+        processor_selector: Optional[ProcessorSelector] = None,
         priority: Optional[int] = None,
         description: Optional[str] = None,
         labels: Optional[Dict[str, str]] = None,
@@ -391,6 +393,9 @@ class EngineClient:
             job_id: Unique ID of the job within the parent program.
             run_context: Properly serialized run context.
             processor_ids: List of processor id for running the program.
+                Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             priority: Optional priority to run at, 0-1000.
             description: Optional description to set on the job.
             labels: Optional set of labels to set on the job.
@@ -404,18 +409,30 @@ class EngineClient:
         # Check program to run and program parameters.
         if priority and not 0 <= priority < 1000:
             raise ValueError('priority must be between 0 and 1000')
+        if not processor_ids and not processor_selector:
+            raise ValueError('No processor has been specified to run the job.')
 
         # Create job.
         job_name = _job_name_from_ids(project_id, program_id, job_id) if job_id else ''
+
+        quantum_processor_selector: Quantum.SchedulingConfig.ProcessorSelector
+
+        if processor_selector:
+            quantum_processor_selector = processor_selector.to_quantum_processor_selector(
+                project_id=project_id
+            )
+        else:
+            quantum_processor_selector = quantum.SchedulingConfig.ProcessorSelector(
+                processor_names=[
+                    _processor_name_from_ids(project_id, processor_id)
+                    for processor_id in processor_ids
+                ]
+            )
+
         job = quantum.QuantumJob(
             name=job_name,
             scheduling_config=quantum.SchedulingConfig(
-                processor_selector=quantum.SchedulingConfig.ProcessorSelector(
-                    processor_names=[
-                        _processor_name_from_ids(project_id, processor_id)
-                        for processor_id in processor_ids
-                    ]
-                )
+                processor_selector=quantum_processor_selector
             ),
             run_context=run_context,
         )
