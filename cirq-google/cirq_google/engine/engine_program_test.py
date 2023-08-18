@@ -25,7 +25,9 @@ import cirq_google as cg
 from cirq_google.api import v1, v2
 from cirq_google.engine import util
 from cirq_google.cloud import quantum
+from cirq_google.engine.device_config_key import DeviceConfigKey
 from cirq_google.engine.engine import EngineContext
+from cirq_google.engine.processor_selector import ProcessorSelector
 from cirq_google.engine.result_type import ResultType
 
 _BATCH_PROGRAM_V2 = util.pack_any(
@@ -131,32 +133,64 @@ constants {
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient.create_job_async')
-def test_run_sweeps_delegation(create_job_async):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mine'], None),
+        (None, ProcessorSelector("mine", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['mine'], ProcessorSelector("mine", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_sweeps_delegation(create_job_async, processor_ids, processor_selector):
     create_job_async.return_value = ('steve', quantum.QuantumJob())
     program = cg.EngineProgram('my-proj', 'my-prog', EngineContext())
     param_resolver = cirq.ParamResolver({})
     job = program.run_sweep(
-        job_id='steve', repetitions=10, params=param_resolver, processor_ids=['mine']
+        job_id='steve',
+        repetitions=10,
+        params=param_resolver,
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
     )
     assert job._job == quantum.QuantumJob()
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient.create_job_async')
-def test_run_batch_delegation(create_job_async):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['lazykitty'], None),
+        (None, ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['lazykitty'], ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_sweeps_delegation(create_job_async, processor_ids, processor_selector):
     create_job_async.return_value = ('kittens', quantum.QuantumJob())
     program = cg.EngineProgram('my-meow', 'my-meow', EngineContext(), result_type=ResultType.Batch)
     resolver_list = [cirq.Points('cats', [1.0, 2.0, 3.0]), cirq.Points('cats', [4.0, 5.0, 6.0])]
     job = program.run_batch(
-        job_id='steve', repetitions=10, params_list=resolver_list, processor_ids=['lazykitty']
+        job_id='steve',
+        repetitions=10,
+        params_list=resolver_list,
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
     )
     assert job._job == quantum.QuantumJob()
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient.create_job_async')
-def test_run_calibration_delegation(create_job_async):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['lazydog'], None),
+        (None, ProcessorSelector("lazydog", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['lazydog'], ProcessorSelector("lazydog", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_calibration_delegation(create_job_async, processor_ids, processor_selector):
     create_job_async.return_value = ('dogs', quantum.QuantumJob())
     program = cg.EngineProgram('woof', 'woof', EngineContext(), result_type=ResultType.Calibration)
-    job = program.run_calibration(processor_ids=['lazydog'])
+    job = program.run_calibration(processor_ids=processor_ids, processor_selector=processor_selector)
     assert job._job == quantum.QuantumJob()
 
 
@@ -169,7 +203,15 @@ def test_run_calibration_no_processors(create_job_async):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient.create_job_async')
-def test_run_batch_no_sweeps(create_job_async):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['lazykitty'], None),
+        (None, ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['lazykitty'], ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_batch_no_sweeps(create_job_async, processor_ids, processor_selector):
     # Running with no sweeps is fine. Uses program's batch size to create
     # proper empty sweeps.
     create_job_async.return_value = ('kittens', quantum.QuantumJob())
@@ -180,7 +222,12 @@ def test_run_batch_no_sweeps(create_job_async):
         context=EngineContext(),
         result_type=ResultType.Batch,
     )
-    job = program.run_batch(job_id='steve', repetitions=10, processor_ids=['lazykitty'])
+    job = program.run_batch(
+        job_id='steve',
+        repetitions=10,
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
+    )
     assert job._job == quantum.QuantumJob()
     batch_run_context = v2.batch_pb2.BatchRunContext()
     create_job_async.call_args[1]['run_context'].Unpack(batch_run_context)
@@ -211,7 +258,15 @@ def test_run_in_batch_mode():
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient.get_job_results_async')
 @mock.patch('cirq_google.engine.engine_client.EngineClient.create_job_async')
-def test_run_delegation(create_job_async, get_results_async):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mine'], None),
+        (None, ProcessorSelector("mine", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['mine'], ProcessorSelector("mine", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_delegation(create_job_async, get_results_async, processor_ids, processor_selector):
     dt = datetime.datetime.now(tz=datetime.timezone.utc)
     create_job_async.return_value = (
         'steve',
@@ -253,7 +308,11 @@ def test_run_delegation(create_job_async, get_results_async):
     program = cg.EngineProgram('a', 'b', EngineContext())
     param_resolver = cirq.ParamResolver({})
     results = program.run(
-        job_id='steve', repetitions=10, param_resolver=param_resolver, processor_ids=['mine']
+        job_id='steve',
+        repetitions=10,
+        param_resolver=param_resolver,
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
     )
 
     assert results == cg.EngineResult(

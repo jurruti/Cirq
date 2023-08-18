@@ -935,6 +935,7 @@ def test_run_calibration(client):
         program_id='prog',
         job_id='job-id',
         processor_ids=['mysim'],
+        processor_selector=None,
         run_context=util.pack_any(v2.run_context_pb2.RunContext()),
         description=None,
         labels={'calibration': ''},

@@ -21,6 +21,7 @@ from google.protobuf import any_pb2
 import cirq
 from cirq_google.engine import abstract_program, engine_client, util
 from cirq_google.cloud import quantum
+from cirq_google.engine.processor_selector import ProcessorSelector
 from cirq_google.engine.result_type import ResultType
 from cirq_google.api import v2
 from cirq_google.engine import engine_job
@@ -69,7 +70,8 @@ class EngineProgram(abstract_program.AbstractProgram):
         job_id: Optional[str] = None,
         params: cirq.Sweepable = None,
         repetitions: int = 1,
-        processor_ids: Sequence[str] = ('xmonsim',),
+        processor_ids: Optional[Sequence[str]] = ('xmonsim',),
+        processor_selector: Optional[ProcessorSelector] = None,
         description: Optional[str] = None,
         labels: Optional[Dict[str, str]] = None,
     ) -> engine_job.EngineJob:
@@ -87,7 +89,9 @@ class EngineProgram(abstract_program.AbstractProgram):
             repetitions: The number of circuit repetitions to run.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             description: An optional description to set on the job.
             labels: Optional set of labels to set on the job.
 
@@ -102,6 +106,8 @@ class EngineProgram(abstract_program.AbstractProgram):
 
         if self.result_type != ResultType.Program:
             raise ValueError('Please use run_batch() for batch mode.')
+        if not processor_ids and not processor_selector:
+            raise ValueError('No processors specified.')
         if not job_id:
             job_id = engine_base._make_random_id('job-')
         run_context = self.context._serialize_run_context(params, repetitions)
@@ -111,6 +117,7 @@ class EngineProgram(abstract_program.AbstractProgram):
             program_id=self.program_id,
             job_id=job_id,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             run_context=run_context,
             description=description,
             labels=labels,
@@ -126,7 +133,8 @@ class EngineProgram(abstract_program.AbstractProgram):
         job_id: Optional[str] = None,
         params_list: Optional[List[cirq.Sweepable]] = None,
         repetitions: int = 1,
-        processor_ids: Sequence[str] = (),
+        processor_ids: Optional[Sequence[str]] = None,
+        processor_selector: Optional[ProcessorSelector] = None,
         description: Optional[str] = None,
         labels: Optional[Dict[str, str]] = None,
     ) -> engine_job.EngineJob:
@@ -151,7 +159,9 @@ class EngineProgram(abstract_program.AbstractProgram):
             repetitions: The number of circuit repetitions to run.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             description: An optional description to set on the job.
             labels: Optional set of labels to set on the job.
 
@@ -170,12 +180,12 @@ class EngineProgram(abstract_program.AbstractProgram):
 
         if self.result_type != ResultType.Batch:
             raise ValueError('Can only use run_batch() in batch mode.')
+        if not processor_ids and not processor_selector:
+            raise ValueError('No processors specified.')
         if params_list is None:
             params_list = [None] * self.batch_size()
         if not job_id:
             job_id = engine_base._make_random_id('job-')
-        if not processor_ids:
-            raise ValueError('No processors specified')
 
         # Pack the run contexts into batches
         batch_context = v2.batch_run_context_to_proto(
@@ -187,6 +197,7 @@ class EngineProgram(abstract_program.AbstractProgram):
             program_id=self.program_id,
             job_id=job_id,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             run_context=util.pack_any(batch_context),
             description=description,
             labels=labels,
@@ -205,7 +216,8 @@ class EngineProgram(abstract_program.AbstractProgram):
     async def run_calibration_async(
         self,
         job_id: Optional[str] = None,
-        processor_ids: Sequence[str] = (),
+        processor_ids: Optional[Sequence[str]] = None,
+        processor_selector: Optional[ProcessorSelector] = None,
         description: Optional[str] = None,
         labels: Optional[Dict[str, str]] = None,
     ) -> engine_job.EngineJob:
@@ -224,7 +236,9 @@ class EngineProgram(abstract_program.AbstractProgram):
                 year, month, and day.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             description: An optional description to set on the job.
             labels: Optional set of labels to set on the job.
 
@@ -238,8 +252,8 @@ class EngineProgram(abstract_program.AbstractProgram):
 
         if not job_id:
             job_id = engine_base._make_random_id('calibration-')
-        if not processor_ids:
-            raise ValueError('No processors specified')
+        if not processor_ids and not processor_selector:
+            raise ValueError('No processors specified.')
 
         # Default run context
         # Note that Quantum Engine currently requires a valid type url
@@ -251,6 +265,7 @@ class EngineProgram(abstract_program.AbstractProgram):
             program_id=self.program_id,
             job_id=job_id,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             run_context=util.pack_any(run_context),
             description=description,
             labels=labels,
@@ -271,7 +286,8 @@ class EngineProgram(abstract_program.AbstractProgram):
         job_id: Optional[str] = None,
         param_resolver: cirq.ParamResolver = cirq.ParamResolver({}),
         repetitions: int = 1,
-        processor_ids: Sequence[str] = ('xmonsim',),
+        processor_ids: Optional[Sequence[str]] = ('xmonsim',),
+        processor_selector: Optional[ProcessorSelector] = None,
         description: Optional[str] = None,
         labels: Optional[Dict[str, str]] = None,
     ) -> cirq.Result:
@@ -286,7 +302,9 @@ class EngineProgram(abstract_program.AbstractProgram):
             repetitions: The number of repetitions to simulate.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             description: An optional description to set on the job.
             labels: Optional set of labels to set on the job.
 
@@ -298,6 +316,7 @@ class EngineProgram(abstract_program.AbstractProgram):
             params=[param_resolver],
             repetitions=repetitions,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             description=description,
             labels=labels,
         )
