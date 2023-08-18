@@ -28,7 +28,9 @@ import cirq_google as cg
 from cirq_google.api import v1, v2
 from cirq_google.engine import util
 from cirq_google.cloud import quantum
+from cirq_google.engine.device_config_key import DeviceConfigKey
 from cirq_google.engine.engine import EngineContext
+from cirq_google.engine.processor_selector import ProcessorSelector
 
 _CIRCUIT = cirq.Circuit(
     cirq.X(cirq.GridQubit(5, 2)) ** 0.5, cirq.measure(cirq.GridQubit(5, 2), key='result')
@@ -261,6 +263,7 @@ results: [{
 )
 
 
+
 def test_make_random_id():
     with mock.patch('random.choice', return_value='A'):
         random_id = cg.engine.engine._make_random_id('prefix-', length=4)
@@ -369,6 +372,7 @@ def test_run_circuit(client):
         program_id='prog',
         job_id='job-id',
         processor_ids=['mysim'],
+        processor_selector=None,
         run_context=util.pack_any(
             v2.run_context_pb2.RunContext(
                 parameter_sweeps=[v2.run_context_pb2.ParameterSweep(repetitions=1)]
@@ -496,12 +500,23 @@ def test_run_circuit_timeout(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_sweep_params(client):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mysim'], None),
+        (None, ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['my_sim'], ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_sweep_params(client, processor_ids, processor_selector):
     setup_run_circuit_with_result_(client, _RESULTS)
 
     engine = cg.Engine(project_id='proj')
     job = engine.run_sweep(
-        program=_CIRCUIT, params=[cirq.ParamResolver({'a': 1}), cirq.ParamResolver({'a': 2})]
+        program=_CIRCUIT,
+        params=[cirq.ParamResolver({'a': 1}), cirq.ParamResolver({'a': 2})],
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
     )
     results = job.results()
     assert len(results) == 2
@@ -525,16 +540,32 @@ def test_run_sweep_params(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_multiple_times(client):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mysim'], None),
+        (None, ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['my_sim'], ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_multiple_times(client, processor_ids, processor_selector):
     setup_run_circuit_with_result_(client, _RESULTS)
 
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
     program = engine.create_program(program=_CIRCUIT)
-    program.run(param_resolver=cirq.ParamResolver({'a': 1}))
+    program.run(
+      param_resolver=cirq.ParamResolver({'a': 1}),
+      processor_ids=processor_ids,
+      processor_selector=processor_selector)
     run_context = v2.run_context_pb2.RunContext()
     client().create_job_async.call_args[1]['run_context'].Unpack(run_context)
     sweeps1 = run_context.parameter_sweeps
-    job2 = program.run_sweep(repetitions=2, params=cirq.Points('a', [3, 4]))
+    job2 = program.run_sweep(
+      repetitions=2,
+      params=cirq.Points('a', [3, 4]),
+      processor_ids=processor_ids,
+      processor_selector=processor_selector
+      )
     client().create_job_async.call_args[1]['run_context'].Unpack(run_context)
     sweeps2 = run_context.parameter_sweeps
     results = job2.results()
@@ -556,11 +587,25 @@ def test_run_multiple_times(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_sweep_v2(client):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mysim'], None),
+        (None, ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['my_sim'], ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_sweep_v2(client, processor_ids, processor_selector):
     setup_run_circuit_with_result_(client, _RESULTS_V2)
 
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
-    job = engine.run_sweep(program=_CIRCUIT, job_id='job-id', params=cirq.Points('a', [1, 2]))
+    job = engine.run_sweep(
+      program=_CIRCUIT,
+      job_id='job-id',
+      params=cirq.Points('a', [1, 2]),
+      processor_ids=processor_ids,
+      processor_selector=processor_selector,
+      )
     results = job.results()
     assert len(results) == 2
     for i, v in enumerate([1, 2]):
@@ -580,7 +625,15 @@ def test_run_sweep_v2(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_batch(client):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mysim'], None),
+        (None, ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['my_sim'], ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_batch(client, processor_ids, processor_selector):
     setup_run_circuit_with_result_(client, _BATCH_RESULTS_V2)
 
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
@@ -588,7 +641,8 @@ def test_run_batch(client):
         programs=[_CIRCUIT, _CIRCUIT2],
         job_id='job-id',
         params_list=[cirq.Points('a', [1, 2]), cirq.Points('a', [3, 4])],
-        processor_ids=['mysim'],
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
     )
     results = job.results()
     assert len(results) == 4
@@ -614,12 +668,24 @@ def test_run_batch(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_batch_no_params(client):
+@pytest.mark.parametrize(
+    'processor_ids, processor_selector',
+    [
+        (['mysim'], None),
+        (None, ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (['my_sim'], ProcessorSelector("my_sim", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+    ],
+)
+def test_run_batch_no_params(client, processor_ids, processor_selector):
     # OK to run with no params, it should use empty sweeps for each
     # circuit.
     setup_run_circuit_with_result_(client, _BATCH_RESULTS_V2)
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
-    engine.run_batch(programs=[_CIRCUIT, _CIRCUIT2], job_id='job-id', processor_ids=['mysim'])
+    engine.run_batch(
+      programs=[_CIRCUIT, _CIRCUIT2],
+      job_id='job-id',
+      processor_ids=processor_ids,
+      processor_selector=processor_selector)
     # Validate correct number of params have been created and that they
     # are empty sweeps.
     run_context = v2.batch_pb2.BatchRunContext()
@@ -647,7 +713,7 @@ def test_batch_size_validation_fails():
             processor_ids=['mysim'],
         )
 
-    with pytest.raises(ValueError, match='Processor id must be specified'):
+    with pytest.raises(ValueError, match='Processor selector must be specified'):
         _ = engine.run_batch(
             programs=[_CIRCUIT, _CIRCUIT2],
             job_id='job-id',
@@ -691,6 +757,7 @@ def test_run_calibration(client):
         program_id='prog',
         job_id='job-id',
         processor_ids=['mysim'],
+        processor_selector=None,
         run_context=util.pack_any(v2.run_context_pb2.RunContext()),
         description=None,
         labels={'calibration': ''},

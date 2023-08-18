@@ -46,6 +46,7 @@ from cirq_google.engine import (
     util,
 )
 from cirq_google.cloud import quantum
+from cirq_google.engine.processor_selector import ProcessorSelector
 from cirq_google.engine.result_type import ResultType
 from cirq_google.serialization import CIRCUIT_SERIALIZER, Serializer
 from cirq_google.serialization.arg_func_langs import arg_to_proto
@@ -214,7 +215,8 @@ class Engine(abstract_engine.AbstractEngine):
         job_id: Optional[str] = None,
         param_resolver: cirq.ParamResolver = cirq.ParamResolver({}),
         repetitions: int = 1,
-        processor_ids: Sequence[str] = ('xmonsim',),
+        processor_ids: Optional[Sequence[str]] = ('xmonsim',),
+        processor_selector: Optional[ProcessorSelector] = None,
         program_description: Optional[str] = None,
         program_labels: Optional[Dict[str, str]] = None,
         job_description: Optional[str] = None,
@@ -238,7 +240,9 @@ class Engine(abstract_engine.AbstractEngine):
             repetitions: The number of repetitions to simulate.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             program_description: An optional description to set on the program.
             program_labels: Optional set of labels to set on the program.
             job_description: An optional description to set on the job.
@@ -254,6 +258,7 @@ class Engine(abstract_engine.AbstractEngine):
             self.run_sweep(
                 program=program,
                 program_id=program_id,
+                processor_selector=processor_selector,
                 job_id=job_id,
                 params=[param_resolver],
                 repetitions=repetitions,
@@ -272,13 +277,14 @@ class Engine(abstract_engine.AbstractEngine):
         job_id: Optional[str] = None,
         params: cirq.Sweepable = None,
         repetitions: int = 1,
-        processor_ids: Sequence[str] = ('xmonsim',),
+        processor_ids: Optional[Sequence[str]] = ('xmonsim',),
+        processor_selector: Optional[ProcessorSelector] = None,
         program_description: Optional[str] = None,
         program_labels: Optional[Dict[str, str]] = None,
         job_description: Optional[str] = None,
         job_labels: Optional[Dict[str, str]] = None,
     ) -> engine_job.EngineJob:
-        """Runs the supplied Circuit via Quantum Engine.Creates
+        """Runs the supplied Circuit via Quantum Engine.
 
         In contrast to run, this runs across multiple parameter sweeps, and
         does not block until a result is returned.
@@ -299,7 +305,9 @@ class Engine(abstract_engine.AbstractEngine):
             repetitions: The number of circuit repetitions to run.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             program_description: An optional description to set on the program.
             program_labels: Optional set of labels to set on the program.
             job_description: An optional description to set on the job.
@@ -320,6 +328,7 @@ class Engine(abstract_engine.AbstractEngine):
             params=params,
             repetitions=repetitions,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             description=job_description,
             labels=job_labels,
         )
@@ -333,7 +342,8 @@ class Engine(abstract_engine.AbstractEngine):
         job_id: Optional[str] = None,
         params_list: Optional[List[cirq.Sweepable]] = None,
         repetitions: int = 1,
-        processor_ids: Sequence[str] = (),
+        processor_ids: Optional[Sequence[str]] = (),
+        processor_selector: Optional[ProcessorSelector] = None,
         program_description: Optional[str] = None,
         program_labels: Optional[Dict[str, str]] = None,
         job_description: Optional[str] = None,
@@ -369,7 +379,9 @@ class Engine(abstract_engine.AbstractEngine):
                 of each circuit in the batch will run with the same repetitions.
             processor_ids: The engine processors that should be candidates
                 to run the program. Only one of these will be scheduled for
-                execution.
+                execution. Ignored if processor_selector is set.
+            processor_selector: Selector of a processor and its configuration
+                to run the program.
             program_description: An optional description to set on the program.
             program_labels: Optional set of labels to set on the program.
             job_description: An optional description to set on the job.
@@ -390,8 +402,8 @@ class Engine(abstract_engine.AbstractEngine):
             params_list = [None] * len(programs)
         elif len(programs) != len(params_list):
             raise ValueError('Number of circuits and sweeps must match')
-        if not processor_ids:
-            raise ValueError('Processor id must be specified.')
+        if not processor_ids and not processor_selector:
+            raise ValueError('Processor selector must be specified.')
         engine_program = await self.create_batch_program_async(
             programs, program_id, description=program_description, labels=program_labels
         )
@@ -400,6 +412,7 @@ class Engine(abstract_engine.AbstractEngine):
             params_list=params_list,
             repetitions=repetitions,
             processor_ids=processor_ids,
+            processor_selector=processor_selector,
             description=job_description,
             labels=job_labels,
         )
