@@ -19,20 +19,31 @@ import pytest
 import cirq
 import cirq_google as cg
 from cirq_google.engine.abstract_processor import AbstractProcessor
+from cirq_google.engine.device_config_key import DeviceConfigKey
 
 
 @pytest.mark.parametrize('circuit', [cirq.Circuit(), cirq.FrozenCircuit()])
-def test_run_circuit(circuit):
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_run_circuit(circuit, device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     params = [cirq.ParamResolver({'a': 1})]
     sampler.run_sweep(circuit, params, 5)
-    processor.run_sweep_async.assert_called_with(params=params, program=circuit, repetitions=5)
+    processor.run_sweep_async.assert_called_with(
+        params=params, program=circuit, repetitions=5, device_config_key=device_config_key
+    )
 
 
-def test_run_batch():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_run_batch(device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     a = cirq.LineQubit(0)
     circuit1 = cirq.Circuit(cirq.X(a))
     circuit2 = cirq.Circuit(cirq.Y(a))
@@ -42,13 +53,20 @@ def test_run_batch():
     params_list = [params1, params2]
     sampler.run_batch(circuits, params_list, 5)
     processor.run_batch_async.assert_called_with(
-        params_list=params_list, programs=circuits, repetitions=5
+        params_list=params_list,
+        programs=circuits,
+        repetitions=5,
+        device_config_key=device_config_key,
     )
 
 
-def test_run_batch_identical_repetitions():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_run_batch_identical_repetitions(device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     a = cirq.LineQubit(0)
     circuit1 = cirq.Circuit(cirq.X(a))
     circuit2 = cirq.Circuit(cirq.Y(a))
@@ -58,13 +76,20 @@ def test_run_batch_identical_repetitions():
     params_list = [params1, params2]
     sampler.run_batch(circuits, params_list, [5, 5])
     processor.run_batch_async.assert_called_with(
-        params_list=params_list, programs=circuits, repetitions=5
+        params_list=params_list,
+        programs=circuits,
+        repetitions=5,
+        device_config_key=device_config_key,
     )
 
 
-def test_run_batch_bad_number_of_repetitions():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_run_batch_bad_number_of_repetitions(device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     a = cirq.LineQubit(0)
     circuit1 = cirq.Circuit(cirq.X(a))
     circuit2 = cirq.Circuit(cirq.Y(a))
@@ -76,12 +101,16 @@ def test_run_batch_bad_number_of_repetitions():
         sampler.run_batch(circuits, params_list, [5, 5, 5])
 
 
-def test_run_batch_differing_repetitions():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_run_batch_differing_repetitions(device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
     job = mock.Mock()
     job.results.return_value = []
     processor.run_sweep.return_value = job
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     a = cirq.LineQubit(0)
     circuit1 = cirq.Circuit(cirq.X(a))
     circuit2 = cirq.Circuit(cirq.Y(a))
@@ -91,19 +120,30 @@ def test_run_batch_differing_repetitions():
     params_list = [params1, params2]
     repetitions = [1, 2]
     sampler.run_batch(circuits, params_list, repetitions)
-    processor.run_sweep_async.assert_called_with(params=params2, program=circuit2, repetitions=2)
+    processor.run_sweep_async.assert_called_with(
+        params=params2, program=circuit2, repetitions=2, device_config_key=device_config_key
+    )
     processor.run_batch_async.assert_not_called()
 
 
-def test_processor_sampler_processor_property():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_processor_sampler_processor_property(device_config_key):
     processor = mock.create_autospec(AbstractProcessor)
-    sampler = cg.ProcessorSampler(processor=processor)
+    sampler = cg.ProcessorSampler(processor=processor, device_config_key=device_config_key)
     assert sampler.processor is processor
 
 
-def test_with_local_processor():
+@pytest.mark.parametrize(
+    'device_config_key',
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
+)
+def test_with_local_processor(device_config_key):
     sampler = cg.ProcessorSampler(
-        processor=cg.engine.SimulatedLocalProcessor(processor_id='my-fancy-processor')
+        processor=cg.engine.SimulatedLocalProcessor(processor_id='my-fancy-processor'),
+        device_config_key=device_config_key,
     )
     r = sampler.run(cirq.Circuit(cirq.measure(cirq.LineQubit(0), key='z')))
     assert isinstance(r, cg.EngineResult)

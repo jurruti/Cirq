@@ -24,19 +24,29 @@ if TYPE_CHECKING:
 class ProcessorSampler(cirq.Sampler):
     """A wrapper around AbstractProcessor to implement the cirq.Sampler interface."""
 
-    def __init__(self, *, processor: 'cg.engine.AbstractProcessor'):
+    def __init__(
+        self,
+        *,
+        processor: 'cg.engine.AbstractProcessor',
+        device_config_key: Optional['cg.engine.DeviceConfigKey'] = None,
+    ):
         """Inits ProcessorSampler.
 
         Args:
             processor: AbstractProcessor instance to use.
+            device_config_key: Unique identifier for the Processor configuration.
         """
         self._processor = processor
+        self._device_config_key = device_config_key
 
     async def run_sweep_async(
         self, program: 'cirq.AbstractCircuit', params: cirq.Sweepable, repetitions: int = 1
     ) -> Sequence['cg.EngineResult']:
         job = await self._processor.run_sweep_async(
-            program=program, params=params, repetitions=repetitions
+            program=program,
+            params=params,
+            repetitions=repetitions,
+            device_config_key=self._device_config_key,
         )
         return await job.results_async()
 
@@ -61,7 +71,10 @@ class ProcessorSampler(cirq.Sampler):
         if len(set(repetitions)) == 1:
             # All repetitions are the same so batching can be done efficiently
             job = await self._processor.run_batch_async(
-                programs=programs, params_list=params_list, repetitions=repetitions[0]
+                programs=programs,
+                params_list=params_list,
+                repetitions=repetitions[0],
+                device_config_key=self._device_config_key,
             )
             return await job.batched_results_async()
         # Varying number of repetitions so no speedup
@@ -75,3 +88,7 @@ class ProcessorSampler(cirq.Sampler):
     @property
     def processor(self) -> 'cg.engine.AbstractProcessor':
         return self._processor
+
+    @property
+    def device_config_key(self) -> 'cg.engine.DeviceConfigKey':
+        return self._device_config_key
