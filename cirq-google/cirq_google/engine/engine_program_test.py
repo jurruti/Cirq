@@ -161,7 +161,10 @@ def test_run_sweeps_delegation(create_job_async, processor_ids, processor_select
     [
         (['lazykitty'], None),
         (None, ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
-        (['lazykitty'], ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (
+            ['lazykitty'],
+            ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")),
+        ),
     ],
 )
 def test_run_sweeps_delegation(create_job_async, processor_ids, processor_selector):
@@ -190,7 +193,9 @@ def test_run_sweeps_delegation(create_job_async, processor_ids, processor_select
 def test_run_calibration_delegation(create_job_async, processor_ids, processor_selector):
     create_job_async.return_value = ('dogs', quantum.QuantumJob())
     program = cg.EngineProgram('woof', 'woof', EngineContext(), result_type=ResultType.Calibration)
-    job = program.run_calibration(processor_ids=processor_ids, processor_selector=processor_selector)
+    job = program.run_calibration(
+        processor_ids=processor_ids, processor_selector=processor_selector
+    )
     assert job._job == quantum.QuantumJob()
 
 
@@ -208,7 +213,10 @@ def test_run_calibration_no_processors(create_job_async):
     [
         (['lazykitty'], None),
         (None, ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
-        (['lazykitty'], ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS"))),
+        (
+            ['lazykitty'],
+            ProcessorSelector("lazykitty", DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")),
+        ),
     ],
 )
 def test_run_batch_no_sweeps(create_job_async, processor_ids, processor_selector):

@@ -97,7 +97,7 @@ class AbstractProcessor(abc.ABC):
             program=program,
             program_id=program_id,
             job_id=job_id,
-            device_config_key = device_config_key,
+            device_config_key=device_config_key,
             params=[param_resolver or cirq.ParamResolver({})],
             repetitions=repetitions,
             program_description=program_description,

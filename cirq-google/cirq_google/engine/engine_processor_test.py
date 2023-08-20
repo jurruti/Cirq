@@ -801,11 +801,7 @@ def test_list_reservations_time_filter_behavior(list_reservations):
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
 @pytest.mark.parametrize(
     'device_config_key',
-    [
-        None,
-        DeviceConfigKey("", "CONFIG_ALIAS"),
-        DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")
-    ],
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
 )
 def test_run_sweep_params(client, device_config_key):
     client().create_program_async.return_value = (
@@ -829,7 +825,7 @@ def test_run_sweep_params(client, device_config_key):
     job = processor.run_sweep(
         program=_CIRCUIT,
         params=[cirq.ParamResolver({'a': 1}), cirq.ParamResolver({'a': 2})],
-        device_config_key=device_config_key
+        device_config_key=device_config_key,
     )
     results = job.results()
     assert len(results) == 2
@@ -859,11 +855,7 @@ def test_run_sweep_params(client, device_config_key):
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
 @pytest.mark.parametrize(
     'device_config_key',
-    [
-        None,
-        DeviceConfigKey("", "CONFIG_ALIAS"),
-        DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")
-    ],
+    [None, DeviceConfigKey("", "CONFIG_ALIAS"), DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")],
 )
 def test_run_batch(client, device_config_key):
     client().create_program_async.return_value = (

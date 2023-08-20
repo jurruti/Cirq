@@ -263,7 +263,6 @@ results: [{
 )
 
 
-
 def test_make_random_id():
     with mock.patch('random.choice', return_value='A'):
         random_id = cg.engine.engine._make_random_id('prefix-', length=4)
@@ -554,18 +553,19 @@ def test_run_multiple_times(client, processor_ids, processor_selector):
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
     program = engine.create_program(program=_CIRCUIT)
     program.run(
-      param_resolver=cirq.ParamResolver({'a': 1}),
-      processor_ids=processor_ids,
-      processor_selector=processor_selector)
+        param_resolver=cirq.ParamResolver({'a': 1}),
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
+    )
     run_context = v2.run_context_pb2.RunContext()
     client().create_job_async.call_args[1]['run_context'].Unpack(run_context)
     sweeps1 = run_context.parameter_sweeps
     job2 = program.run_sweep(
-      repetitions=2,
-      params=cirq.Points('a', [3, 4]),
-      processor_ids=processor_ids,
-      processor_selector=processor_selector
-      )
+        repetitions=2,
+        params=cirq.Points('a', [3, 4]),
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
+    )
     client().create_job_async.call_args[1]['run_context'].Unpack(run_context)
     sweeps2 = run_context.parameter_sweeps
     results = job2.results()
@@ -600,12 +600,12 @@ def test_run_sweep_v2(client, processor_ids, processor_selector):
 
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
     job = engine.run_sweep(
-      program=_CIRCUIT,
-      job_id='job-id',
-      params=cirq.Points('a', [1, 2]),
-      processor_ids=processor_ids,
-      processor_selector=processor_selector,
-      )
+        program=_CIRCUIT,
+        job_id='job-id',
+        params=cirq.Points('a', [1, 2]),
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
+    )
     results = job.results()
     assert len(results) == 2
     for i, v in enumerate([1, 2]):
@@ -682,10 +682,11 @@ def test_run_batch_no_params(client, processor_ids, processor_selector):
     setup_run_circuit_with_result_(client, _BATCH_RESULTS_V2)
     engine = cg.Engine(project_id='proj', proto_version=cg.engine.engine.ProtoVersion.V2)
     engine.run_batch(
-      programs=[_CIRCUIT, _CIRCUIT2],
-      job_id='job-id',
-      processor_ids=processor_ids,
-      processor_selector=processor_selector)
+        programs=[_CIRCUIT, _CIRCUIT2],
+        job_id='job-id',
+        processor_ids=processor_ids,
+        processor_selector=processor_selector,
+    )
     # Validate correct number of params have been created and that they
     # are empty sweeps.
     run_context = v2.batch_pb2.BatchRunContext()
