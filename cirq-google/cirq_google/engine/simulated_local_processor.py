@@ -22,6 +22,7 @@ from cirq_google.engine import calibration, validating_sampler
 from cirq_google.engine.abstract_local_processor import AbstractLocalProcessor
 from cirq_google.engine.abstract_local_program import AbstractLocalProgram
 from cirq_google.engine.abstract_program import AbstractProgram
+from cirq_google.engine.device_config_key import DeviceConfigKey
 from cirq_google.engine.local_simulation_type import LocalSimulationType
 from cirq_google.engine.simulated_local_job import SimulatedLocalJob
 from cirq_google.engine.simulated_local_program import SimulatedLocalProgram
@@ -202,6 +203,7 @@ class SimulatedLocalProcessor(AbstractLocalProcessor):
         programs: Sequence[cirq.AbstractCircuit],
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params_list: Optional[Sequence[cirq.Sweepable]] = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -238,6 +240,7 @@ class SimulatedLocalProcessor(AbstractLocalProcessor):
         program: cirq.AbstractCircuit,
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params: cirq.Sweepable = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,

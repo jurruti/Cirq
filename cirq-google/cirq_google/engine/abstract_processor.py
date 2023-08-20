@@ -28,6 +28,7 @@ import cirq
 from cirq_google.api import v2
 from cirq_google.cloud import quantum
 from cirq_google.engine import calibration
+from cirq_google.engine.device_config_key import DeviceConfigKey
 
 if TYPE_CHECKING:
     import cirq_google as cg
@@ -58,6 +59,7 @@ class AbstractProcessor(abc.ABC):
         program: cirq.Circuit,
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         param_resolver: Optional[cirq.ParamResolver] = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -79,6 +81,9 @@ class AbstractProcessor(abc.ABC):
                 of the format 'job-################YYMMDD' will be generated,
                 where # is alphanumeric and YYMMDD is the current year, month,
                 and day.
+            device_config_key: Unique identifier for the Processor configuration. The Processor
+                will be configured with this Device Configuration when it runs the Job.
+                If empty, it will use the internal default device configuration.
             param_resolver: Parameters to run with the program.
             repetitions: The number of repetitions to simulate.
             program_description: An optional description to set on the program.
@@ -92,6 +97,7 @@ class AbstractProcessor(abc.ABC):
             program=program,
             program_id=program_id,
             job_id=job_id,
+            device_config_key = device_config_key,
             params=[param_resolver or cirq.ParamResolver({})],
             repetitions=repetitions,
             program_description=program_description,
@@ -109,6 +115,7 @@ class AbstractProcessor(abc.ABC):
         program: cirq.AbstractCircuit,
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params: cirq.Sweepable = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -132,6 +139,9 @@ class AbstractProcessor(abc.ABC):
                 of the format 'job-################YYMMDD' will be generated,
                 where # is alphanumeric and YYMMDD is the current year, month,
                 and day.
+            device_config_key: Unique identifier for the Processor configuration. The Processor
+                will be configured with this Device Configuration when it runs the Job.
+                If empty, it will use the internal default device configuration.
             params: Parameters to run with the program.
             repetitions: The number of circuit repetitions to run.
             program_description: An optional description to set on the program.
@@ -151,6 +161,7 @@ class AbstractProcessor(abc.ABC):
         programs: Sequence[cirq.AbstractCircuit],
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params_list: Optional[Sequence[cirq.Sweepable]] = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -177,6 +188,9 @@ class AbstractProcessor(abc.ABC):
                 of the format 'job-################YYMMDD' will be generated,
                 where # is alphanumeric and YYMMDD is the current year, month,
                 and day.
+            device_config_key: Unique identifier for the Processor configuration. The Processor
+                will be configured with this Device Configuration when it runs the Job.
+                If empty, it will use the internal default device configuration.
             params_list: Parameter sweeps to use with the circuits. The number
                 of sweeps should match the number of circuits and will be
                 paired in order with the circuits. If this is None, it is

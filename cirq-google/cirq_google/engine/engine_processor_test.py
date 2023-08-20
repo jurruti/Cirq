@@ -26,6 +26,7 @@ import cirq
 import cirq_google as cg
 from cirq_google.api import v2
 from cirq_google.engine import util
+from cirq_google.engine.device_config_key import DeviceConfigKey
 from cirq_google.engine.engine import EngineContext
 from cirq_google.cloud import quantum
 
@@ -798,7 +799,15 @@ def test_list_reservations_time_filter_behavior(list_reservations):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_sweep_params(client):
+@pytest.mark.parametrize(
+    'device_config_key',
+    [
+        None,
+        DeviceConfigKey("", "CONFIG_ALIAS"),
+        DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")
+    ],
+)
+def test_run_sweep_params(client, device_config_key):
     client().create_program_async.return_value = (
         'prog',
         quantum.QuantumProgram(name='projects/proj/programs/prog'),
@@ -818,7 +827,9 @@ def test_run_sweep_params(client):
 
     processor = cg.EngineProcessor('a', 'p', EngineContext())
     job = processor.run_sweep(
-        program=_CIRCUIT, params=[cirq.ParamResolver({'a': 1}), cirq.ParamResolver({'a': 2})]
+        program=_CIRCUIT,
+        params=[cirq.ParamResolver({'a': 1}), cirq.ParamResolver({'a': 2})],
+        device_config_key=device_config_key
     )
     results = job.results()
     assert len(results) == 2
@@ -846,7 +857,15 @@ def test_run_sweep_params(client):
 
 
 @mock.patch('cirq_google.engine.engine_client.EngineClient', autospec=True)
-def test_run_batch(client):
+@pytest.mark.parametrize(
+    'device_config_key',
+    [
+        None,
+        DeviceConfigKey("", "CONFIG_ALIAS"),
+        DeviceConfigKey("RUN_NAME", "CONFIG_ALIAS")
+    ],
+)
+def test_run_batch(client, device_config_key):
     client().create_program_async.return_value = (
         'prog',
         quantum.QuantumProgram(name='projects/proj/programs/prog'),
@@ -867,6 +886,7 @@ def test_run_batch(client):
         programs=[_CIRCUIT, _CIRCUIT],
         job_id='job-id',
         params_list=[cirq.Points('a', [1, 2]), cirq.Points('a', [3, 4])],
+        device_config_key=device_config_key,
     )
     results = job.results()
     assert len(results) == 4

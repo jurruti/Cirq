@@ -29,6 +29,8 @@ from cirq_google.engine import (
     processor_sampler,
     util,
 )
+from cirq_google.engine.device_config_key import DeviceConfigKey
+from cirq_google.engine.processor_selector import ProcessorSelector
 
 if TYPE_CHECKING:
     import cirq_google as cg
@@ -117,6 +119,7 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
         programs: Sequence[cirq.AbstractCircuit],
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params_list: Optional[Sequence[cirq.Sweepable]] = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -143,6 +146,9 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
                 of the format 'job-################YYMMDD' will be generated,
                 where # is alphanumeric and YYMMDD is the current year, month,
                 and day.
+            device_config_key: Unique identifier for the Processor configuration. The Processor
+                will be configured with this Device Configuration when it runs the Job.
+                If empty, it will use the internal default device configuration.
             params_list: Parameter sweeps to use with the circuits. The number
                 of sweeps should match the number of circuits and will be
                 paired in order with the circuits. If this is None, it is
@@ -164,6 +170,7 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
         return await self.engine().run_batch_async(
             programs=programs,
             processor_ids=[self.processor_id],
+            processor_selector=ProcessorSelector(self.processor_id, device_config_key),
             program_id=program_id,
             params_list=list(params_list) if params_list is not None else None,
             repetitions=repetitions,
@@ -231,6 +238,7 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
         program: cirq.AbstractCircuit,
         program_id: Optional[str] = None,
         job_id: Optional[str] = None,
+        device_config_key: Optional[DeviceConfigKey] = None,
         params: cirq.Sweepable = None,
         repetitions: int = 1,
         program_description: Optional[str] = None,
@@ -255,6 +263,9 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
                 of the format 'job-################YYMMDD' will be generated,
                 where # is alphanumeric and YYMMDD is the current year, month,
                 and day.
+            device_config_key: Unique identifier for the Processor configuration. The Processor
+                will be configured with this Device Configuration when it runs the Job.
+                If empty, it will use the internal default device configuration.
             params: Parameters to run with the program.
             repetitions: The number of circuit repetitions to run.
             program_description: An optional description to set on the program.
@@ -267,6 +278,7 @@ class EngineProcessor(abstract_processor.AbstractProcessor):
         """
         return await self.engine().run_sweep_async(
             processor_ids=[self.processor_id],
+            processor_selector=ProcessorSelector(self.processor_id, device_config_key),
             program=program,
             program_id=program_id,
             job_id=job_id,
